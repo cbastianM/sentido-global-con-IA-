@@ -74,7 +74,7 @@ Evalúa la respuesta según los criterios establecidos. Responde SOLO con el JSO
             {"role": "user", "content": user_message}
         ],
         "temperature": 0.3,
-        "max_tokens": 600
+        "max_tokens": 1500
     }
 
     try:
