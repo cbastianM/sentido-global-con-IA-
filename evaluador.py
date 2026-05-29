@@ -1,4 +1,5 @@
 import json
+import re
 import requests
 import streamlit as st
 from typing import Optional
@@ -20,15 +21,28 @@ Criterios de evaluación:
 
 Total: 10 puntos.
 
-Responde SIEMPRE con el siguiente formato JSON exacto (sin markdown, sin texto adicional):
-{
-  "puntaje": <número entre 0 y 10>,
-  "nivel": "<Excelente|Bueno|Regular|Insuficiente>",
-  "fortalezas": "<qué hizo bien el estudiante en 1-2 oraciones>",
-  "aspectos_mejorar": "<qué puede mejorar en 1-2 oraciones>",
-  "ejemplo_ideal": "<una oración que sería el sentido global ideal para este texto>",
-  "mensaje_motivador": "<mensaje corto y alentador personalizado para el estudiante>"
-}"""
+Responde ÚNICAMENTE con un JSON válido, sin markdown, sin backticks, sin texto antes ni después:
+{"puntaje": 7, "nivel": "Bueno", "fortalezas": "...", "aspectos_mejorar": "...", "ejemplo_ideal": "...", "mensaje_motivador": "..."}"""
+
+
+def _extraer_json(texto: str) -> dict:
+    """Extrae JSON de la respuesta, limpiando markdown si es necesario."""
+    # Limpiar backticks de markdown
+    limpio = re.sub(r"```(?:json)?\s*", "", texto).strip()
+    limpio = limpio.rstrip("`").strip()
+
+    # Intentar parsear directo
+    try:
+        return json.loads(limpio)
+    except json.JSONDecodeError:
+        pass
+
+    # Buscar el primer { ... } en el texto
+    match = re.search(r"\{.*\}", limpio, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+
+    raise ValueError(f"No se pudo extraer JSON de la respuesta: {texto[:200]}")
 
 
 def evaluar_sentido_global(
@@ -46,7 +60,7 @@ def evaluar_sentido_global(
 SENTIDO GLOBAL ESCRITO POR {nombre.upper()}:
 "{respuesta_estudiante}"
 
-Evalúa la respuesta según los criterios establecidos y responde en el formato JSON indicado."""
+Evalúa la respuesta según los criterios establecidos. Responde SOLO con el JSON, nada más."""
 
     headers = {
         "Authorization": f"Bearer {st.secrets['DEEPSEEK_API_KEY']}",
@@ -60,15 +74,14 @@ Evalúa la respuesta según los criterios establecidos y responde en el formato 
             {"role": "user", "content": user_message}
         ],
         "temperature": 0.3,
-        "max_tokens": 600,
-        "response_format": {"type": "json_object"}
+        "max_tokens": 600
     }
 
     try:
         response = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
-        return json.loads(content)
+        return _extraer_json(content)
 
     except requests.exceptions.Timeout:
         return {"error": "La evaluación tardó demasiado. Intenta de nuevo."}
