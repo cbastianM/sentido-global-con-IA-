@@ -1,4 +1,5 @@
 import streamlit as st
+import markdown as md
 from pathlib import Path
 from evaluador import evaluar_sentido_global
 
@@ -318,7 +319,7 @@ texto_data = textos[st.session_state.texto_idx]
 st.markdown("---")
 st.markdown(f"### 📄 Texto {texto_data['num']}: {texto_data['titulo']}")
 st.markdown(
-    f"""<div class="texto-card">{texto_data['cuerpo'].replace(chr(10), '<br>')}</div>""",
+    f"""<div class="texto-card">{md.markdown(texto_data['cuerpo'])}</div>""",
     unsafe_allow_html=True
 )
 
