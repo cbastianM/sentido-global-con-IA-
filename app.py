@@ -1,5 +1,5 @@
 import streamlit as st
-import markdown as md
+import re
 from pathlib import Path
 from evaluador import evaluar_sentido_global
 
@@ -201,6 +201,23 @@ section[data-testid="stSidebar"] * { color: #d4e8d5 !important; }
 """, unsafe_allow_html=True)
 
 
+# ── Markdown simple → HTML ───────────────────────────────────────────────────
+
+def md_to_html(texto: str) -> str:
+    """Convierte markdown básico a HTML sin dependencias externas."""
+    parrafos = re.split(r'\n{2,}', texto.strip())
+    resultado = []
+    for p in parrafos:
+        p = p.strip()
+        if not p:
+            continue
+        p = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', p)
+        p = re.sub(r'\*(.+?)\*', r'<em>\1</em>', p)
+        p = p.replace('\n', '<br>')
+        resultado.append(f'<p>{p}</p>')
+    return '\n'.join(resultado)
+
+
 # ── Utilidades ───────────────────────────────────────────────────────────────
 
 def cargar_textos(carpeta: str = "TEXTOS") -> list[dict]:
@@ -319,7 +336,7 @@ texto_data = textos[st.session_state.texto_idx]
 st.markdown("---")
 st.markdown(f"### 📄 Texto {texto_data['num']}: {texto_data['titulo']}")
 st.markdown(
-    f"""<div class="texto-card">{md.markdown(texto_data['cuerpo'])}</div>""",
+    f"""<div class="texto-card">{md_to_html(texto_data["cuerpo"])}</div>""",
     unsafe_allow_html=True
 )
 
